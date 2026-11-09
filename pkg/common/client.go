@@ -892,8 +892,8 @@ func (c *Client) login(user, pass string) error {
 }
 
 // defaultRequester returns a default client for requesting http endpoints
-func defaultRequester(serverCert []byte) (Requester, error) {
-	tlsConfig, err := createTLSConfig(serverCert)
+func defaultRequester(serverCert []byte, insecureSkipVerify bool) (Requester, error) {
+	tlsConfig, err := createTLSConfig(serverCert, insecureSkipVerify)
 	if err != nil {
 		return nil, err
 	}
@@ -908,11 +908,15 @@ func defaultRequester(serverCert []byte) (Requester, error) {
 }
 
 // createTLSConfig constructs and returns a TLS Config with a root CA read
-// from the serverCert param if present, or a permissive config which
-// is insecure otherwise
-func createTLSConfig(serverCert []byte) (*tls.Config, error) {
+// from the serverCert param if present. Without one it verifies against the
+// system roots; certificate verification is skipped only when the operator
+// asked for it (insecureSkipVerify, the ExternalKeycloak's insecureSsl).
+func createTLSConfig(serverCert []byte, insecureSkipVerify bool) (*tls.Config, error) {
+	if insecureSkipVerify {
+		return &tls.Config{InsecureSkipVerify: true}, nil // nolint: explicit operator opt-in
+	}
 	if serverCert == nil {
-		return &tls.Config{InsecureSkipVerify: true}, nil // nolint
+		return &tls.Config{MinVersion: tls.VersionTLS12}, nil
 	}
 
 	rootCAPool := x509.NewCertPool()
@@ -1049,7 +1053,7 @@ func (i *LocalConfigKeycloakFactory) AuthenticatedClient(kc v1alpha1.ExternalKey
 		}
 	}
 
-	requester, err := defaultRequester(serverCert)
+	requester, err := defaultRequester(serverCert, insecureSsl)
 	if err != nil {
 		return nil, err
 	}

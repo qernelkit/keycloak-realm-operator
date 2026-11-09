@@ -336,7 +336,7 @@ func TestClient_useKeycloakServerCertificate(t *testing.T) {
 
 	pemCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ts.Certificate().Raw})
 
-	requester, err := defaultRequester(pemCert)
+	requester, err := defaultRequester(pemCert, false)
 	assert.NoError(t, err)
 	httpClient, ok := requester.(*http.Client)
 	assert.True(t, ok)
